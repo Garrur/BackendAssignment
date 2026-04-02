@@ -69,6 +69,11 @@ app.use('/api/users', usersRouter);
 app.use('/api/records', recordsRouter);
 app.use('/api/dashboard', dashboardRouter);
 
+// ── Root Redirect ──────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.redirect('/api/docs');
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({
