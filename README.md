@@ -19,6 +19,33 @@ A clean, production-quality REST API for a finance dashboard system, featuring *
 
 ---
 
+## Testing the Deployed API
+
+The easiest way to test the API without writing any code or setting up Postman is by using the built-in **Swagger UI**.
+
+1. **Open the API Docs**: Navigate to [`/api/docs`](https://backendzoroyn.onrender.com/api/docs) on the live server.
+2. **Login as Admin**: 
+   - Scroll down to the `POST /api/auth/login` endpoint.
+   - Click **Try it out**.
+   - Input the following JSON:
+     ```json
+     {
+       "email": "admin@finance.dev",
+       "password": "Password123!"
+     }
+     ```
+   - Click **Execute** and copy the `token` string from the response.
+3. **Authorize Your Session**:
+   - Scroll to the very top of the page.
+   - Click the green **Authorize** button with the lock icon.
+   - Paste the token into the `Value` field and click **Authorize**, then **Close**.
+4. **Test Endpoints**:
+   - You are now fully authenticated as an Admin.
+   - Expand any endpoint (like `GET /api/dashboard/summary` or `POST /api/records`), click **Try it out**, and **Execute**.
+   - **Note**: If you want to test Role-Based Restrictions (e.g. attempting to create a record as a Viewer), repeat Step 2 with `viewer@finance.dev` and log in with that token!
+
+---
+
 ## Getting Started
 
 ### 1. Clone and install
