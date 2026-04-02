@@ -67,7 +67,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await usersService.getUserById(req.params.id);
+    const user = await usersService.getUserById(req.params.id as string);
     res.status(200).json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -103,7 +103,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = updateUserSchema.parse(req.body);
-    const user = await usersService.updateUser(req.params.id, input);
+    const user = await usersService.updateUser(req.params.id as string, input);
     res.status(200).json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -129,7 +129,7 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
  */
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await usersService.deactivateUser(req.params.id, req.user!.id);
+    const user = await usersService.deactivateUser(req.params.id as string, req.user!.id);
     res.status(200).json({ success: true, data: user, message: 'User deactivated' });
   } catch (err) {
     next(err);

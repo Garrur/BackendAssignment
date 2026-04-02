@@ -111,7 +111,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const record = await recordsService.getRecordById(req.params.id);
+    const record = await recordsService.getRecordById(req.params.id as string);
     res.status(200).json({ success: true, data: record });
   } catch (err) {
     next(err);
@@ -149,7 +149,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', authorize('ANALYST', 'ADMIN'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = updateRecordSchema.parse(req.body);
-    const record = await recordsService.updateRecord(req.params.id, input);
+    const record = await recordsService.updateRecord(req.params.id as string, input);
     res.status(200).json({ success: true, data: record });
   } catch (err) {
     next(err);
@@ -177,7 +177,7 @@ router.patch('/:id', authorize('ANALYST', 'ADMIN'), async (req: Request, res: Re
  */
 router.delete('/:id', authorize('ADMIN'), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await recordsService.softDeleteRecord(req.params.id);
+    await recordsService.softDeleteRecord(req.params.id as string);
     res.status(200).json({ success: true, message: 'Record deleted successfully' });
   } catch (err) {
     next(err);
