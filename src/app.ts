@@ -29,10 +29,7 @@ const swaggerSpec = swaggerJsdoc({
         'A RESTful API for finance data processing and access control. Supports role-based authentication (Viewer / Analyst / Admin), financial record CRUD, and aggregated dashboard analytics.',
       contact: { name: 'Finance Backend API' },
     },
-    servers: [
-      { url: 'https://backendzoroyn.onrender.com', description: 'Production server' },
-      { url: 'http://localhost:3000', description: 'Local development' }
-    ],
+    
     components: {
       securitySchemes: {
         bearerAuth: {
