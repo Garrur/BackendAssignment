@@ -78,12 +78,69 @@ The system strictly enforces access through three distinct roles. Below is exact
 - **Dashboard APIs (`/api/dashboard/*`)**: Full read access to summary aggregates, category splits, and monthly trends.
 - **User APIs (`/api/users`)**: *Strictly Forbidden.* Attempting to view the user list returns a `403 Forbidden`.
 
+**Testing in Postman / curl:**
+```bash
+# Step 1 — Get Viewer token
+curl -s -X POST https://backendzoroyn.onrender.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"viewer@finance.dev","password":"Password123!"}'
+# → Copy token from response
+
+# Step 2 — View dashboard summary (✅ allowed)
+curl https://backendzoroyn.onrender.com/api/dashboard/summary \
+  -H "Authorization: Bearer <token>"
+
+# Step 3 — List records (✅ allowed)
+curl https://backendzoroyn.onrender.com/api/records \
+  -H "Authorization: Bearer <token>"
+
+# Step 4 — Try to create a record (❌ expect 403 Forbidden)
+curl -X POST https://backendzoroyn.onrender.com/api/records \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":100,"type":"INCOME","category":"Test","date":"2024-01-01T00:00:00.000Z"}'
+
+# Step 5 — Try to access users (❌ expect 403 Forbidden)
+curl https://backendzoroyn.onrender.com/api/users \
+  -H "Authorization: Bearer <token>"
+```
+
 ### 2. Analyst Role (`analyst@finance.dev` | `Password123!`)
 *The Analyst manages the ledger but has no administrative power.*
 - **Record Setup**: Inherits all Viewer permissions.
 - **Data Entry**: Can execute `POST /api/records` to create new financial entries, and `PATCH /api/records/:id` to fix typos or adjust amounts safely.
   - *Restriction:* Analysts cannot `DELETE` records. The frontend hides the "Delete" button, and the API blocks the request.
 - **User APIs**: *Strictly Forbidden.*
+
+**Testing in Postman / curl:**
+```bash
+# Step 1 — Get Analyst token
+curl -s -X POST https://backendzoroyn.onrender.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"analyst@finance.dev","password":"Password123!"}'
+# → Copy token from response
+
+# Step 2 — Create a new record (✅ allowed)
+curl -X POST https://backendzoroyn.onrender.com/api/records \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":2500,"type":"INCOME","category":"Freelance","date":"2024-06-01T00:00:00.000Z","description":"Analyst test entry"}'
+# → Copy the record id from response
+
+# Step 3 — Update that record (✅ allowed)
+curl -X PATCH https://backendzoroyn.onrender.com/api/records/<record-id> \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":3000,"description":"Updated by analyst"}'
+
+# Step 4 — Try to delete that record (❌ expect 403 Forbidden)
+curl -X DELETE https://backendzoroyn.onrender.com/api/records/<record-id> \
+  -H "Authorization: Bearer <token>"
+
+# Step 5 — Try to access users (❌ expect 403 Forbidden)
+curl https://backendzoroyn.onrender.com/api/users \
+  -H "Authorization: Bearer <token>"
+```
 
 ### 3. Admin Role (`admin@finance.dev` | `Password123!`)
 *The Admin has absolute control over the system, data retention, and user management.*
@@ -92,6 +149,48 @@ The system strictly enforces access through three distinct roles. Below is exact
   - Can `GET` the paginated list of all registered users on the dedicated Frontend Users tab.
   - Can implement role promotions via `PATCH /api/users/:id` (e.g., upgrading a Viewer to an Analyst).
   - Can indefinitely suspend accounts via `DELETE /api/users/:id`.
+
+**Testing in Postman / curl:**
+```bash
+# Step 1 — Get Admin token
+curl -s -X POST https://backendzoroyn.onrender.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@finance.dev","password":"Password123!"}'
+# → Copy token from response
+
+# Step 2 — Create a record (✅ allowed)
+curl -X POST https://backendzoroyn.onrender.com/api/records \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":9999,"type":"INCOME","category":"Admin Test","date":"2024-06-01T00:00:00.000Z","description":"Admin created entry"}'
+# → Copy the record id from response
+
+# Step 3 — Soft-delete that record (✅ Admin only)
+curl -X DELETE https://backendzoroyn.onrender.com/api/records/<record-id> \
+  -H "Authorization: Bearer <token>"
+
+# Step 4 — List all users (✅ Admin only)
+curl https://backendzoroyn.onrender.com/api/users \
+  -H "Authorization: Bearer <token>"
+# → Copy a user id (e.g. the Viewer)
+
+# Step 5 — Promote Viewer → Analyst (✅ Admin only)
+curl -X PATCH https://backendzoroyn.onrender.com/api/users/<user-id> \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"ANALYST"}'
+
+# Step 6 — Deactivate a user (✅ Admin only)
+curl -X DELETE https://backendzoroyn.onrender.com/api/users/<user-id> \
+  -H "Authorization: Bearer <token>"
+
+# Step 7 — View full dashboard analytics (✅ allowed)
+curl https://backendzoroyn.onrender.com/api/dashboard/by-category \
+  -H "Authorization: Bearer <token>"
+
+curl https://backendzoroyn.onrender.com/api/dashboard/by-month \
+  -H "Authorization: Bearer <token>"
+```
 
 ---
 
