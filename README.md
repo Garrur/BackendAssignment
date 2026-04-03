@@ -240,6 +240,27 @@ finance-dashboard-monorepo/
 │   └── tsconfig.json
 └── README.md
 ```
+---
+
+## 📋 Assignment Requirements Fulfillment
+
+Here is how the project maps directly to the specific goals laid out in the assignment instructions:
+
+### Core Requirements
+1. **User and Role Management**: Implemented via `/api/users` endpoints. Custom role mapping (`VIEWER`, `ANALYST`, `ADMIN`), active/inactive account toggling, and role upgrading logic are all fully built via Prisma Enums. 
+2. **Financial Records Management**: Full CRUD enabled under `/api/records`. Includes complex filtering on `GET` (by date range, category, type) and a fuzzy search param over descriptions.
+3. **Dashboard Summary APIs**: Complex aggregations exist under `/api/dashboard/*`. Features raw SQL processing for `netBalance`, `totalIncome`, category splits, and monthly trends. It is not just simple CRUD.
+4. **Access Control Logic**: Strictly enforced via the highly reusable `authorize('ROLE')` Express middleware factory (e.g. shielding `POST /records` from Viewers). 
+5. **Validation and Error Handling**: 100% of incoming payloads and queries are strictly validated using `Zod` schemas before hitting controllers. A global Express error handler catches Zod schema errors, mapped Prisma violations (e.g. 404s and 409s), and standard HTTP AppErrors.
+6. **Data Persistence**: Uses a relational PostgreSQL database hosted on Neon, managed via Prisma ORM.
+
+### Optional Enhancements Added
+- **Authentication:** Fully robust JWT (JSON Web Token) authentication flow (`/api/auth/login`).
+- **Pagination:** Record listing automatically uses `page` and `limit` skip/take logic returning total pages.
+- **Search Support:** Implemented text-search filtering over multiple text columns simultaneously.
+- **Soft Delete Functionality:** Records natively employ `isDeleted: true` instead of physically dropping rows.
+- **API Documentation:** Complete, automated Open API spec and Swagger UI served natively over `/api/docs`.
+- **Rate Limiting:** Protects backend endpoints against brute force and DDoS attacks (`express-rate-limit`).
 
 ---
 
