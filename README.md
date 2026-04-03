@@ -1,202 +1,101 @@
-# Finance Data Processing and Access Control Backend
+# Finance Data Processing and Access Control System
 
-A clean, production-quality REST API for a finance dashboard system, featuring **role-based access control**, financial record management, and aggregated analytics.
+A complete production-quality stack featuring a robust **REST API Backend** and a beautifully designed **React Frontend Dashboard**. This system demonstrates role-based access control, financial record management, aggregated analytics, and clean architectural design.
 
 ---
 
-## Tech Stack
+## Technical Architecture
 
 | Layer | Technology |
 |---|---|
-| Language | TypeScript (Node.js) |
-| Framework | Express.js |
-| Database | PostgreSQL (**NeonDB** — serverless) |
-| ORM | **Prisma** |
-| Auth | JWT (`jsonwebtoken`) |
-| Validation | `zod` |
-| Password Hashing | `bcryptjs` |
-| API Docs | **Swagger UI** at `/api/docs` |
+| **Frontend** | React 18, Vite, TypeScript, Vanilla CSS (Glassmorphism design) |
+| **Backend** | Node.js, Express.js, TypeScript |
+| **Database** | PostgreSQL (**NeonDB** — serverless) |
+| **ORM** | **Prisma** |
+| **Auth** | JWT (`jsonwebtoken`) |
+| **Validation** | `zod` |
+| **API Docs** | **Swagger UI** |
 
 ---
 
-## Testing the Deployed API
+## 🚀 Setup Process
 
-The easiest way to test the API without writing any code or setting up Postman is by using the built-in **Swagger UI**.
-
-1. **Open the API Docs**: Navigate to [`/api/docs`](https://backendzoroyn.onrender.com/api/docs) on the live server.
-2. **Login as Admin**: 
-   - Scroll down to the `POST /api/auth/login` endpoint.
-   - Click **Try it out**.
-   - Input the following JSON:
-     ```json
-     {
-       "email": "admin@finance.dev",
-       "password": "Password123!"
-     }
-     ```
-   - Click **Execute** and copy the `token` string from the response.
-3. **Authorize Your Session**:
-   - Scroll to the very top of the page.
-   - Click the green **Authorize** button with the lock icon.
-   - Paste the token into the `Value` field and click **Authorize**, then **Close**.
-4. **Test Endpoints**:
-   - You are now fully authenticated as an Admin.
-   - Expand any endpoint (like `GET /api/dashboard/summary` or `POST /api/records`), click **Try it out**, and **Execute**.
-   - **Note**: If you want to test Role-Based Restrictions (e.g. attempting to create a record as a Viewer), repeat Step 2 with `viewer@finance.dev` and log in with that token!
-
----
-
-## Getting Started
-
-### 1. Clone and install
+### 1. Backend Setup
 
 ```bash
-git clone <repo-url>
-cd finance-backend
+# Enter the backend directory and install dependencies
+cd backend
 npm install
-```
 
-### 2. Configure environment
-
-```bash
+# Configure environment variables
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your **NeonDB** connection string and JWT secret:
-
-```env
-DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require"
-JWT_SECRET="change-this-to-a-strong-secret"
-JWT_EXPIRES_IN="7d"
-PORT=3000
-NODE_ENV=development
-```
-
-> Get your NeonDB URL from [neon.tech](https://neon.tech) → New Project → Connection String
-
-### 3. Run database migrations
+Edit `.env` and fill in your **NeonDB** connection string:
+> `DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require"`
 
 ```bash
-npx prisma migrate dev --name init
-```
-
-### 4. Seed the database
-
-```bash
+# Run migrations and seed database (Creates 3 test users and 60 records)
+npm run db:migrate
 npm run seed
 ```
 
-This creates 3 demo users and 60 realistic financial records:
-
+**Seeded Demo Accounts:**
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@finance.dev | Password123! |
-| Analyst | analyst@finance.dev | Password123! |
-| Viewer | viewer@finance.dev | Password123! |
-
-### 5. Start the development server
+| Admin | `admin@finance.dev` | `Password123!` |
+| Analyst | `analyst@finance.dev` | `Password123!` |
+| Viewer | `viewer@finance.dev` | `Password123!` |
 
 ```bash
+# Start the backend server
 npm run dev
 ```
 
-Open **Swagger UI** at: `http://localhost:3000/api/docs`
+### 2. Frontend Setup (Dashboard)
 
----
-
-## API Reference
-
-### Base URL
-```
-http://localhost:3000/api
-```
-
-### Authentication
-All protected endpoints require a `Bearer` token in the `Authorization` header:
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-Get a token by logging in via `POST /api/auth/login`.
-
----
-
-### Auth Endpoints
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| POST | `/auth/register` | Public | Register a new user |
-| POST | `/auth/login` | Public | Login and get JWT |
-| GET | `/auth/me` | All roles | Get current user profile |
-
-**Register example:**
+In a new terminal window:
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"John","email":"john@example.com","password":"Password123!","role":"ANALYST"}'
+cd frontend
+npm install
+
+# Start the Vite React development server
+npm run dev
 ```
-
-**Login example:**
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@finance.dev","password":"Password123!"}'
-```
+Open **http://localhost:5173** to view the live Dashboard.
 
 ---
 
-### User Endpoints (Admin only)
+## 🔒 Role-Based API Explanation
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/users` | List all users (paginated, filterable) |
-| GET | `/users/:id` | Get a specific user |
-| PATCH | `/users/:id` | Update role or status |
-| DELETE | `/users/:id` | Deactivate a user |
+The system strictly enforces access through three distinct roles. Below is exactly how each role interacts with the API suite.
 
-**Query params for listing:** `page`, `limit`, `role`, `status`
+### 1. Viewer Role (`viewer@finance.dev` | `Password123!`)
+*The Viewer is restricted to read-only access for analytical purposes.*
+- **Auth APIs (`/api/auth/*`)**: Can register, login, and view their own profile.
+- **Record APIs (`/api/records`)**: Can execute `GET /api/records` to list and filter records, and `GET /api/records/:id` to view specifics.
+  - *Restriction:* Any attempt to `POST`, `PATCH`, or `DELETE` a record will return a `403 Forbidden`. The frontend explicitly removes the "Add Record", "Edit", and "Delete" buttons for Viewers.
+- **Dashboard APIs (`/api/dashboard/*`)**: Full read access to summary aggregates, category splits, and monthly trends.
+- **User APIs (`/api/users`)**: *Strictly Forbidden.* Attempting to view the user list returns a `403 Forbidden`.
 
----
+### 2. Analyst Role (`analyst@finance.dev` | `Password123!`)
+*The Analyst manages the ledger but has no administrative power.*
+- **Record Setup**: Inherits all Viewer permissions.
+- **Data Entry**: Can execute `POST /api/records` to create new financial entries, and `PATCH /api/records/:id` to fix typos or adjust amounts safely.
+  - *Restriction:* Analysts cannot `DELETE` records. The frontend hides the "Delete" button, and the API blocks the request.
+- **User APIs**: *Strictly Forbidden.*
 
-### Financial Record Endpoints
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| POST | `/records` | Analyst, Admin | Create a record |
-| GET | `/records` | All roles | List records (paginated + filtered) |
-| GET | `/records/:id` | All roles | Get a specific record |
-| PATCH | `/records/:id` | Analyst, Admin | Update a record |
-| DELETE | `/records/:id` | Admin only | Soft delete a record |
-
-**Query params for listing:**
-- `page` (default: 1), `limit` (default: 20, max: 100)
-- `type` — `INCOME` or `EXPENSE`
-- `category` — partial match, case-insensitive
-- `from` / `to` — ISO datetime range filter
-- `search` — searches description and category
-
-**Create record example:**
-```bash
-curl -X POST http://localhost:3000/api/records \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"amount":5000,"type":"INCOME","category":"Salary","date":"2024-03-01T00:00:00.000Z","description":"Monthly salary"}'
-```
+### 3. Admin Role (`admin@finance.dev` | `Password123!`)
+*The Admin has absolute control over the system, data retention, and user management.*
+- **Full Ledger Control**: Inherits all Analyst permissions. Can also execute `DELETE /api/records/:id` to soft-delete incorrect entries entirely from view.
+- **User Management (`/api/users/*`)**: 
+  - Can `GET` the paginated list of all registered users on the dedicated Frontend Users tab.
+  - Can implement role promotions via `PATCH /api/users/:id` (e.g., upgrading a Viewer to an Analyst).
+  - Can indefinitely suspend accounts via `DELETE /api/users/:id`.
 
 ---
 
-### Dashboard Endpoints (All roles)
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/dashboard/summary` | Total income, expenses, net balance |
-| GET | `/dashboard/by-category` | Totals grouped by category |
-| GET | `/dashboard/by-month` | Monthly income vs expense trend |
-| GET | `/dashboard/recent?limit=10` | Last N records (max 50) |
-
----
-
-## Access Control Matrix
+## 📊 Access Control Matrix
 
 | Action | Viewer | Analyst | Admin |
 |---|---|---|---|
@@ -212,55 +111,64 @@ curl -X POST http://localhost:3000/api/records \
 
 ---
 
-## Project Structure
+## 🏗️ Project Structure
 
-```
-finance-backend/
-├── prisma/
-│   ├── schema.prisma       # Single source of truth for DB schema
-│   └── seed.ts             # Demo data seeder
-├── src/
-│   ├── config/env.ts       # Zod-validated env vars
-│   ├── lib/prisma.ts       # Prisma client singleton
-│   ├── middleware/
-│   │   ├── authenticate.ts # JWT → req.user
-│   │   ├── authorize.ts    # Role guard factory
-│   │   └── errorHandler.ts # Centralized error handler
-│   ├── modules/
-│   │   ├── auth/           # Register, login, me
-│   │   ├── users/          # Admin user management
-│   │   ├── records/        # Financial records CRUD
-│   │   └── dashboard/      # Aggregation APIs
-│   ├── types/express.d.ts  # req.user type augmentation
-│   ├── utils/AppError.ts   # Custom error class
-│   ├── app.ts              # Express setup + Swagger
-│   └── server.ts           # Entry point
-├── .env.example
-├── package.json
-├── tsconfig.json
+```text
+finance-dashboard-monorepo/
+├── backend/                # Express & Prisma Backend
+│   ├── prisma/
+│   │   ├── schema.prisma   # Single source of truth for DB schema
+│   │   └── seed.ts         # Demo data seeder
+│   ├── src/
+│   │   ├── config/         # Zod-validated env vars
+│   │   ├── lib/            # Prisma client singleton
+│   │   ├── middleware/     # JWT Auth, Role Guards, Error Handlers
+│   │   ├── modules/        # Auth, Users, Records, Dashboard routers and services
+│   │   ├── types/          # Express Request augmentation
+│   │   ├── utils/          # AppError class
+│   │   ├── app.ts          # Express setup + Swagger
+│   │   └── server.ts       # Entry point
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env
+├── frontend/               # Full React TS Vite Dashboard
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── api.ts          # Axios Interceptors
+│   │   └── App.tsx         # Reach Router + Role Guards
+│   ├── package.json
+│   └── tsconfig.json
 └── README.md
 ```
 
 ---
 
-## Design Decisions & Assumptions
+## 🧠 Assumptions Made
 
-1. **Soft delete** — Records are never permanently deleted; `isDeleted: true` hides them from all queries. Only admins can trigger this.
-2. **Role assignment on register** — For simplicity during evaluation, the `role` field is accepted on registration. In a real system, only admins would be able to promote users.
-3. **NeonDB** — Serverless PostgreSQL with connection pooling. The `?sslmode=require` parameter is mandatory.
-4. **Dashboard aggregation** — The `by-month` endpoint uses a raw SQL query (`prisma.$queryRaw`) to extract year/month from the `date` column, which is more efficient than fetching all records and grouping in JavaScript.
-5. **Passwords** — Never returned in any API response. All user selects explicitly exclude `passwordHash`.
-6. **Consistent response shape** — All responses follow `{ success: boolean, data?: any, error?: { code, message } }`.
+1. **Role Assignment during Registration:** For the sake of this evaluation and easier testability, the `/api/auth/register` API accepts a `role` payload. In a strict real-world production environment, registration defaults to `VIEWER` and only an Admin can formally elevate a user to `ANALYST` or `ADMIN`.
+2. **PostgreSQL as Source of Truth:** Assumed that the assignment required a highly robust, scalable database rather than a mock in-memory array. NeonDB was chosen for zero-config serverless isolation to prove scalability.
+3. **Soft Deletion over Hard Deletion:** Financial systems require strict auditing. Assuming financial records should never actually be dropped from the database, a soft delete (`isDeleted: true`) pattern is universally applied. Admins flag the record, and the `GET` queries permanently filter it out.
 
 ---
 
-## Available Scripts
+## ⚖️ Tradeoffs Considered
 
-| Script | Description |
-|---|---|
-| `npm run dev` | Start dev server with hot reload |
-| `npm run build` | Compile TypeScript |
-| `npm start` | Run compiled server |
-| `npm run seed` | Seed the database |
-| `npm run db:migrate` | Run Prisma migrations |
-| `npm run db:studio` | Open Prisma Studio (DB GUI) |
+1. **Vanilla CSS vs TailwindCSS**
+   - *Tradeoff:* Tailwind allows for rapid prototyping, but I opted for Vanilla CSS with native CSS variables to demonstrate raw styling fundamentals and construct a custom Glassmorphism design system without heavy utility markup overhead.
+2. **Aggregations in SQL vs Memory**
+   - *Tradeoff:* For `/api/dashboard/by-month`, instead of pulling all records into Node.js and calculating totals using `reduce` arrays (which inevitably hits memory limits as scale increases), I utilized raw SQL `DATE_TRUNC` and `SUM` via `prisma.$queryRaw`. This pushes the computational load to Postgres, saving Node memory at the cost of slightly more complex raw query syntax.
+3. **Monorepo Structure vs Separate Repos**
+   - *Tradeoff:* The frontend React code is completely self-contained in a `frontend/` subdirectory rather than a completely separate Git repository. This allows the evaluator to seamlessly test both halves with a single `git clone`, though in enterprise scenarios they would likely be separated for independent CI/CD build pipelines.
+
+---
+
+## Testing the Deployed Backend APIs directly via Swagger
+
+If you wish to test the APIs without the React frontend, the API is fully documented and interactive via **Swagger UI**.
+
+1. Navigate to [`/api/docs`](https://backendzoroyn.onrender.com/api/docs) on the live server (or `localhost:3000/api/docs` locally).
+2. Scroll to `POST /api/auth/login`, click **Try it out**, input `{"email": "admin@finance.dev", "password": "Password123!"}`, and hit Execute.
+3. Copy the `token` string given in the response body.
+4. Click the green **Authorize** button at the top of the page, paste your token, and apply it.
+5. You can now execute and test all secured endpoints natively in your browser!
