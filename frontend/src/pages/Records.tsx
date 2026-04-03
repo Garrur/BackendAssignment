@@ -1,147 +1,133 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+
+const INITIAL_FORM = {
+  amount: '', type: 'EXPENSE', category: '',
+  date: new Date().toISOString().split('T')[0], description: '',
+};
 
 export default function Records() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-
-  // Modal State
+  const [records, setRecords]   = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  
-  const [formData, setFormData] = useState({
-    amount: '',
-    type: 'EXPENSE',
-    category: '',
-    date: new Date().toISOString().split('T')[0],
-    description: ''
-  });
+  const [editId, setEditId]     = useState<string | null>(null);
+  const [formData, setFormData] = useState(INITIAL_FORM);
+  const [saving, setSaving]     = useState(false);
 
-  useEffect(() => {
-    fetchRecords();
-  }, []);
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const canWrite  = user?.role !== 'VIEWER';
+  const canDelete = user?.role === 'ADMIN';
+
+  useEffect(() => { fetchRecords(); }, []);
 
   const fetchRecords = async () => {
     try {
       const res = await api.get('/records');
       setRecords(res.data.data.records);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  const deleteRecord = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this record?')) return;
-    try {
-      await api.delete(`/records/${id}`);
-      fetchRecords();
-    } catch (err) {
-      alert('Failed to delete record. Ensure you are an Admin.');
-    }
+  const openAdd = () => {
+    setIsEditing(false); setEditId(null);
+    setFormData(INITIAL_FORM); setShowModal(true);
   };
 
-  const openAddModal = () => {
-    setIsEditing(false);
-    setEditId(null);
+  const openEdit = (r: any) => {
+    setIsEditing(true); setEditId(r.id);
     setFormData({
-      amount: '',
-      type: 'EXPENSE',
-      category: '',
-      date: new Date().toISOString().split('T')[0],
-      description: ''
-    });
-    setShowModal(true);
-  };
-
-  const openEditModal = (record: any) => {
-    setIsEditing(true);
-    setEditId(record.id);
-    setFormData({
-      amount: String(record.amount),
-      type: record.type,
-      category: record.category,
-      date: new Date(record.date).toISOString().split('T')[0],
-      description: record.description || ''
+      amount: String(r.amount), type: r.type, category: r.category,
+      date: new Date(r.date).toISOString().split('T')[0],
+      description: r.description || '',
     });
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); setSaving(true);
     try {
       const payload = {
-        amount: Number(formData.amount),
-        type: formData.type,
+        amount: Number(formData.amount), type: formData.type,
         category: formData.category,
         date: new Date(formData.date).toISOString(),
-        description: formData.description
+        description: formData.description,
       };
-
-      if (isEditing && editId) {
-        await api.patch(`/records/${editId}`, payload);
-      } else {
-        await api.post('/records', payload);
-      }
-      
-      setShowModal(false);
-      fetchRecords(); // Refresh the table
+      if (isEditing && editId) await api.patch(`/records/${editId}`, payload);
+      else                     await api.post('/records', payload);
+      setShowModal(false); fetchRecords();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Failed to save record');
-    }
+    } finally { setSaving(false); }
   };
 
-  if (loading) return <div>Loading records...</div>;
+  const deleteRecord = async (id: string) => {
+    if (!confirm('Delete this record?')) return;
+    try { await api.delete(`/records/${id}`); fetchRecords(); }
+    catch { alert('Failed to delete record.'); }
+  };
+
+  const fmt = (n: number) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (loading) return (
+    <div className="loading-screen">
+      <div style={{ width: 20, height: 20, border: '2px solid rgba(0,200,150,0.15)', borderTop: '2px solid #00c896', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      Loading records...
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.8rem' }}>All Records</h1>
-        {user?.role !== 'VIEWER' && (
-          <button className="btn btn-primary" onClick={openAddModal}>
-            + Add Record
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">All Records</h1>
+          <p className="page-subtitle">{records.length} financial entries</p>
+        </div>
+        {canWrite && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={16} /> Add Record
           </button>
         )}
       </div>
 
-      <div className="glass-card">
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <table className="data-table">
           <thead>
-            <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--card-border)' }}>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Category</th>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Description</th>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Date</th>
-              <th style={{ padding: '12px 0', fontWeight: 500, textAlign: 'right' }}>Amount</th>
-              {user?.role !== 'VIEWER' && <th style={{ padding: '12px 0', fontWeight: 500, textAlign: 'right' }}>Actions</th>}
+            <tr>
+              <th style={{ paddingLeft: 28 }}>Category</th>
+              <th>Description</th>
+              <th>Date</th>
+              <th style={{ textAlign: 'right' }}>Amount</th>
+              {canWrite && <th style={{ textAlign: 'right', paddingRight: 28 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {records.map((record: any) => (
-              <tr key={record.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '16px 0' }}>{record.category}</td>
-                <td style={{ padding: '16px 0', color: 'var(--text-secondary)' }}>{record.description}</td>
-                <td style={{ padding: '16px 0', color: 'var(--text-secondary)' }}>{new Date(record.date).toLocaleDateString()}</td>
-                <td style={{ 
-                  padding: '16px 0', 
-                  textAlign: 'right',
-                  color: record.type === 'INCOME' ? 'var(--success-color)' : 'var(--danger-color)',
-                  fontWeight: 500
-                }}>
-                  {record.type === 'INCOME' ? '+' : '-'}${Number(record.amount).toLocaleString()}
+            {records.map((r: any) => (
+              <tr key={r.id}>
+                <td style={{ paddingLeft: 28 }}>
+                  <span className="category-pill">{r.category}</span>
                 </td>
-                {user?.role !== 'VIEWER' && (
-                  <td style={{ padding: '16px 0', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      <button className="btn btn-primary" onClick={() => openEditModal(record)} style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'transparent', border: '1px solid var(--card-border)' }}>
-                        Edit
+                <td style={{ color: 'var(--on-surface-variant)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r.description}
+                </td>
+                <td style={{ fontFamily: 'Space Grotesk, monospace', fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>
+                  {new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+                <td style={{ textAlign: 'right' }} className={r.type === 'INCOME' ? 'amount-income' : 'amount-expense'}>
+                  {r.type === 'INCOME' ? '+' : '-'}{fmt(r.amount)}
+                </td>
+                {canWrite && (
+                  <td style={{ textAlign: 'right', paddingRight: 28 }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost" onClick={() => openEdit(r)} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                        <Pencil size={13} /> Edit
                       </button>
-                      {user?.role === 'ADMIN' && (
-                        <button className="btn btn-danger" onClick={() => deleteRecord(record.id)} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                          Delete
+                      {canDelete && (
+                        <button className="btn btn-danger" onClick={() => deleteRecord(r.id)} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                          <Trash2 size={13} /> Delete
                         </button>
                       )}
                     </div>
@@ -153,70 +139,47 @@ export default function Records() {
         </table>
       </div>
 
+      {/* Modal */}
       {showModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div className="glass-card" style={{ width: '400px', padding: '30px' }}>
-            <h2 style={{ marginBottom: '20px', fontSize: '1.4rem' }}>{isEditing ? 'Edit Record' : 'Create New Record'}</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-               
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Type</label>
-                  <select 
-                    className="glass-input" 
-                    value={formData.type} 
-                    onChange={e => setFormData({...formData, type: e.target.value})}
-                  >
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="modal-card">
+            <h2 className="modal-title">{isEditing ? 'Edit Record' : 'New Record'}</h2>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label className="form-label">Type</label>
+                  <select className="form-input form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                     <option value="EXPENSE">Expense</option>
                     <option value="INCOME">Income</option>
                   </select>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Amount ($)</label>
-                  <input 
-                    type="number" className="glass-input" required min="0.01" step="0.01"
-                    value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})}
-                  />
+                <div>
+                  <label className="form-label">Amount ($)</label>
+                  <input type="number" className="form-input" required min="0.01" step="0.01" placeholder="0.00"
+                    value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
                 </div>
               </div>
-
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Category</label>
-                <input 
-                  type="text" className="glass-input" required placeholder="e.g. Utilities, Salary"
-                  value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
-                />
+                <label className="form-label">Category</label>
+                <input type="text" className="form-input" required placeholder="e.g. Salary, Utilities"
+                  value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} />
               </div>
-
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Date</label>
-                <input 
-                  type="date" className="glass-input" required
-                  value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
-                />
+                <label className="form-label">Date</label>
+                <input type="date" className="form-input" required
+                  value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
               </div>
-
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Description</label>
-                <input 
-                  type="text" className="glass-input" placeholder="Brief note"
-                  value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
-                />
+                <label className="form-label">Description</label>
+                <input type="text" className="form-input" placeholder="Optional note"
+                  value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
               </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                  {isEditing ? 'Update Record' : 'Save Record'}
+              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
+                  {saving ? 'Saving...' : isEditing ? 'Update Record' : 'Save Record'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

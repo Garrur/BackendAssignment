@@ -1,64 +1,72 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Receipt, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Users, LogOut, Zap } from 'lucide-react';
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  const navLinkStyle = ({ isActive }: { isActive: boolean }) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 20px',
-    textDecoration: 'none',
-    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-    borderRight: isActive ? '3px solid var(--accent-color)' : '3px solid transparent',
-    transition: 'all 0.2s ease',
-    fontWeight: isActive ? 500 : 400,
-  });
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
+  const roleColor: Record<string, string> = {
+    ADMIN:    '#00c896',   // Jade green
+    ANALYST:  '#f59e0b',   // Amber gold
+    VIEWER:   '#34d399',   // Mint green
+  };
+
+  const navItems = [
+    { to: '/',        label: 'Dashboard', icon: <LayoutDashboard size={18} />, end: true },
+    { to: '/records', label: 'Records',   icon: <Receipt size={18} /> },
+    ...(user?.role === 'ADMIN' ? [{ to: '/users', label: 'Users', icon: <Users size={18} /> }] : []),
+  ];
 
   return (
     <div className="sidebar">
-      <div style={{ padding: '24px 20px', fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent-color)', borderBottom: '1px solid var(--card-border)' }}>
-        FinanceApp
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon">
+          <Zap size={18} color="white" fill="white" />
+        </div>
+        <span className="sidebar-logo-text">FinanceOS</span>
       </div>
-      
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '20px' }}>
-        <NavLink to="/" style={navLinkStyle} end>
-          <LayoutDashboard size={20} />
-          Dashboard
-        </NavLink>
-        <NavLink to="/records" style={navLinkStyle}>
-          <Receipt size={20} />
-          Records
-        </NavLink>
-        {user?.role === 'ADMIN' && (
-          <NavLink to="/users" style={navLinkStyle}>
-            <Users size={20} />
-            Users
+
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+        {navItems.map(item => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+          >
+            {item.icon}
+            {item.label}
           </NavLink>
-        )}
+        ))}
       </nav>
 
-      <div style={{ padding: '20px', borderTop: '1px solid var(--card-border)' }}>
-        <button 
-          onClick={handleLogout}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '12px', 
-            background: 'transparent', border: 'none', color: 'var(--text-secondary)', 
-            cursor: 'pointer', padding: '10px', width: '100%', fontSize: '1rem' 
-          }}
-        >
-          <LogOut size={20} />
-          Logout
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <div className="user-chip">
+          <div className="user-avatar">{initials}</div>
+          <div className="user-info">
+            <div className="user-name">{user?.name || 'User'}</div>
+            <div className="user-role" style={{ color: roleColor[user?.role] || '#b3c5ff' }}>
+              {user?.role || 'VIEWER'}
+            </div>
+          </div>
+        </div>
+        <button className="logout-btn" onClick={handleLogout}>
+          <LogOut size={16} />
+          Sign out
         </button>
       </div>
     </div>

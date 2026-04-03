@@ -1,83 +1,105 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 
 export default function Dashboard() {
-  const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netBalance: 0 });
-  const [recent, setRecent] = useState([]);
+  const [summary, setSummary] = useState({ totalIncome: 0, totalExpenses: 0, netBalance: 0 });
+  const [recent, setRecent]   = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetch = async () => {
       try {
         const [sumRes, recRes] = await Promise.all([
           api.get('/dashboard/summary'),
-          api.get('/dashboard/recent')
+          api.get('/dashboard/recent'),
         ]);
         setSummary(sumRes.data.data);
         setRecent(recRes.data.data);
       } catch (err) {
-        console.error('Dashboard fetch error', err);
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchDashboard();
+    fetch();
   }, []);
 
-  if (loading) return <div>Loading dashboard...</div>;
-
-  const StatCard = ({ title, value, icon, type }: any) => (
-    <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '20px' }}>
+  if (loading) return (
+    <div className="loading-screen">
       <div style={{
-        width: '48px', height: '48px', borderRadius: '12px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: type === 'income' ? 'rgba(16, 185, 129, 0.1)' : type === 'expense' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-        color: type === 'income' ? 'var(--success-color)' : type === 'expense' ? 'var(--danger-color)' : 'var(--accent-color)'
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px' }}>{title}</div>
-        <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>${Number(value).toLocaleString()}</div>
-      </div>
+        width: 20, height: 20, border: '2px solid rgba(0,200,150,0.15)',
+        borderTop: '2px solid #00c896', borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      Loading dashboard...
     </div>
   );
 
+  const fmt = (n: number) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const stats = [
+    { label: 'Total Income',    value: fmt(summary.totalIncome),    type: 'income',  icon: <TrendingUp size={22} /> },
+    { label: 'Total Expenses',  value: fmt(summary.totalExpenses),  type: 'expense', icon: <TrendingDown size={22} /> },
+    { label: 'Net Balance',     value: fmt(summary.netBalance),     type: 'balance', icon: <Wallet size={22} /> },
+  ];
+
   return (
     <div>
-      <h1 style={{ marginBottom: '24px', fontSize: '1.8rem' }}>Overview</h1>
-      
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '40px' }}>
-        <StatCard title="Total Income" value={summary.totalIncome} type="income" icon={<TrendingUp />} />
-        <StatCard title="Total Expenses" value={summary.totalExpense} type="expense" icon={<TrendingDown />} />
-        <StatCard title="Net Balance" value={summary.netBalance} type="balance" icon={<DollarSign />} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Page header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">
+            Good {getGreeting()}, {user.name?.split(' ')[0] || 'Admin'}
+          </h1>
+          <p className="page-subtitle">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
       </div>
 
-      <div className="glass-card">
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>Recent Activity</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {/* Stat cards */}
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
+        {stats.map(s => (
+          <div key={s.label} className={`stat-card ${s.type}`}>
+            <div className={`stat-icon ${s.type}`}>{s.icon}</div>
+            <div className="stat-label">{s.label}</div>
+            <div className={`stat-value ${s.type}`}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent activity */}
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ fontFamily: 'Manrope, sans-serif', fontSize: '1rem', fontWeight: 700 }}>Recent Activity</h2>
+          <span style={{ fontFamily: 'Space Grotesk, monospace', fontSize: '0.75rem', color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Last {recent.length} records
+          </span>
+        </div>
+        <table className="data-table">
           <thead>
-            <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--card-border)' }}>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Category</th>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Description</th>
-              <th style={{ padding: '12px 0', fontWeight: 500 }}>Date</th>
-              <th style={{ padding: '12px 0', fontWeight: 500, textAlign: 'right' }}>Amount</th>
+            <tr>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Date</th>
+              <th style={{ textAlign: 'right' }}>Amount</th>
             </tr>
           </thead>
           <tbody>
-            {recent.map((record: any) => (
-              <tr key={record.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '16px 0' }}>{record.category}</td>
-                <td style={{ padding: '16px 0', color: 'var(--text-secondary)' }}>{record.description}</td>
-                <td style={{ padding: '16px 0', color: 'var(--text-secondary)' }}>{new Date(record.date).toLocaleDateString()}</td>
-                <td style={{ 
-                  padding: '16px 0', 
-                  textAlign: 'right',
-                  color: record.type === 'INCOME' ? 'var(--success-color)' : 'var(--danger-color)',
-                  fontWeight: 500
-                }}>
-                  {record.type === 'INCOME' ? '+' : '-'}${Number(record.amount).toLocaleString()}
+            {recent.map((r: any) => (
+              <tr key={r.id}>
+                <td><span className="category-pill">{r.category}</span></td>
+                <td style={{ color: 'var(--on-surface-variant)' }}>{r.description}</td>
+                <td style={{ color: 'var(--on-surface-variant)', fontFamily: 'Space Grotesk, monospace', fontSize: '0.82rem' }}>
+                  {new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+                <td style={{ textAlign: 'right' }} className={r.type === 'INCOME' ? 'amount-income' : 'amount-expense'}>
+                  {r.type === 'INCOME' ? '+' : '-'}{fmt(r.amount)}
                 </td>
               </tr>
             ))}
@@ -86,4 +108,11 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
 }
