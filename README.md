@@ -27,12 +27,9 @@ A complete production-quality stack featuring a robust **REST API Backend** and 
 cd backend
 npm install
 
-# Configure environment variables
+# Configure environment variables (A test NeonDB URL is already pre-filled for your convenience)
 cp .env.example .env
 ```
-
-Edit `.env` and fill in your **NeonDB** connection string:
-> `DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require"`
 
 ```bash
 # Run migrations and seed database (Creates 3 test users and 60 records)
